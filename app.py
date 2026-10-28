@@ -1,4 +1,3 @@
-# app.py
 import os
 import re
 import sqlite3
@@ -6,23 +5,23 @@ import ipaddress
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    flash,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-this-secret")
 
-DB_PATH = os.environ.get("DATABASE_PATH", "/tmp/phishguard.db")
-
-# ... your rest of the app code ...
-)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-DB_PATH = os.environ.get("DATABASE_PATH", "/tmp/phishguard.db")
-)
+DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "phishguard.db"))
 
 MAX_URL_LENGTH = 2048
-
 
 SUSPICIOUS_TERMS = {
     "account": 4,
@@ -73,12 +72,12 @@ BRAND_TERMS = {
 
 def init_db():
     folder = os.path.dirname(DB_PATH)
-
     if folder:
         os.makedirs(folder, exist_ok=True)
 
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS scans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 url TEXT NOT NULL,
@@ -88,13 +87,14 @@ def init_db():
                 indicators TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
-        """)
+            """
+        )
         conn.commit()
 
 
 def analyze_url(raw_url):
     """
-    Analyze URL text without visiting the destination.
+    Analyze a URL without visiting the destination.
     """
     url = (raw_url or "").strip()
     indicators = []
@@ -103,68 +103,53 @@ def analyze_url(raw_url):
     if not url:
         return {
             "valid": False,
-            "error": "Enter a URL to analyze."
+            "error": "Enter a URL to analyze.",
         }
 
     if len(url) > MAX_URL_LENGTH:
         return {
             "valid": False,
-            "error": f"URL is too long (maximum {MAX_URL_LENGTH} characters)."
+            "error": f"URL is too long (maximum {MAX_URL_LENGTH} characters).",
         }
 
-    candidate = (
-        url
-        if re.match(r"^https?://", url, re.I)
-        else "https://" + url
-    )
+    candidate = url if re.match(r"^https?://", url, re.I) else "https://" + url
 
     try:
         parsed = urlparse(candidate)
         hostname = parsed.hostname
-        _ = parsed.port
-
     except ValueError:
         return {
             "valid": False,
-            "error": "That URL appears malformed. Check the domain and port."
+            "error": "That URL appears malformed. Check the domain and port.",
         }
 
     if parsed.scheme.lower() not in ("http", "https") or not hostname:
         return {
             "valid": False,
-            "error": "Enter a valid HTTP or HTTPS URL with a hostname."
+            "error": "Enter a valid HTTP or HTTPS URL with a hostname.",
         }
 
     if parsed.username or parsed.password:
         score += 25
-        indicators.append(
-            "URL contains embedded username/password fields."
-        )
+        indicators.append("URL contains embedded username/password fields.")
 
     hostname = hostname.lower().rstrip(".")
 
-    if not hostname or (
-        "." not in hostname and hostname != "localhost"
-    ):
+    if not hostname or ("." not in hostname and hostname != "localhost"):
         score += 10
-        indicators.append(
-            "Hostname is not a typical fully qualified domain."
-        )
+        indicators.append("Hostname is not a typical fully qualified domain.")
 
     try:
         ipaddress.ip_address(hostname)
         score += 25
-        indicators.append(
-            "Destination uses an IP address instead of a domain name."
-        )
+        indicators.append("Destination uses an IP address instead of a domain name.")
     except ValueError:
         pass
 
     if parsed.scheme.lower() == "http":
         score += 8
         indicators.append(
-            "Uses HTTP rather than HTTPS. "
-            "This is a weakness, not proof of phishing."
+            "Uses HTTP rather than HTTPS. This is a weakness, not proof of phishing."
         )
 
     if len(url) > 120:
@@ -186,15 +171,12 @@ def analyze_url(raw_url):
     if "@" in parsed.netloc:
         score += 18
         indicators.append(
-            "Contains '@' in the authority section, "
-            "which can obscure the actual host."
+            "Contains '@' in the authority section, which can obscure the actual host."
         )
 
     if "%" in parsed.netloc:
         score += 8
-        indicators.append(
-            "Hostname/authority contains percent-encoding."
-        )
+        indicators.append("Hostname/authority contains percent-encoding.")
 
     if hostname in SHORTENERS:
         score += 12
@@ -202,35 +184,25 @@ def analyze_url(raw_url):
             "Uses a URL-shortening service that hides the final destination."
         )
 
-    combined = (
-        hostname + " " + parsed.path + " " + parsed.query
-    ).lower()
+    combined = (hostname + " " + parsed.path + " " + parsed.query).lower()
 
     matched = []
-
     for term, weight in SUSPICIOUS_TERMS.items():
         pattern = rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])"
-
         if re.search(pattern, combined):
             score += weight
             matched.append(term)
 
     if matched:
         indicators.append(
-            "Contains potentially sensitive terms: "
-            + ", ".join(matched[:8])
-            + "."
+            "Contains potentially sensitive terms: " + ", ".join(matched[:8]) + "."
         )
 
-    brand_hits = [
-        brand for brand in BRAND_TERMS if brand in hostname
-    ]
-
+    brand_hits = [brand for brand in BRAND_TERMS if brand in hostname]
     if brand_hits and any(ch.isdigit() for ch in hostname):
         score += 8
         indicators.append(
-            "Hostname combines a brand-related term with digits; "
-            "verify the domain carefully."
+            "Hostname combines a brand-related term with digits; verify the domain carefully."
         )
 
     score = min(100, score)
@@ -258,44 +230,43 @@ def analyze_url(raw_url):
         "verdict": verdict,
         "level": level,
         "indicators": indicators,
-        "created_at": datetime.now(timezone.utc).isoformat(
-            timespec="seconds"
-        ),
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "disclaimer": (
             "Heuristic result only. A low score does not prove a site is safe."
         ),
     }
 
-class check_url_reputation:
-    def __init__(self):
-        pass
 
-    def method(self):
-        raise NotImplementedError
+class CheckURLReputation:
+    """
+    Placeholder reputation checker.
+    Replace this with a real threat-intel API if you want live checks.
+    """
+    def __init__(self, url):
+        self.url = url
 
-    def another_method(self):
-        raise NotImplementedError
-
-    def yet_another_method(self):
-        raise NotImplementedError
+    def lookup(self):
+        return {
+            "available": False,
+            "unsafe": False,
+            "message": "No external reputation service configured.",
+            "threats": [],
+        }
 
 
 def scan_url(raw_url):
     """
-    Run heuristic analysis and, when configured, threat-intelligence checks.
-    Shared by the web dashboard and JSON API.
+    Run heuristic analysis and optional reputation checks.
+    Shared by the dashboard and API.
     """
     result = analyze_url(raw_url)
 
     if not result.get("valid"):
         return result
 
-    # Check known unsafe URLs without visiting the submitted destination.
     try:
-        reputation = check_url_reputation(result["url"])
-
+        reputation = CheckURLReputation(result["url"]).lookup()
     except Exception:
-        # An unexpected integration error must not crash the scanner.
         reputation = {
             "available": False,
             "unsafe": None,
@@ -308,23 +279,16 @@ def scan_url(raw_url):
     if reputation.get("unsafe") is True:
         result["verdict"] = "Known unsafe URL"
         result["level"] = "high"
-        result["risk_score"] = max(
-            result["risk_score"], 90
-        )
-
+        result["risk_score"] = max(result["risk_score"], 90)
         result["disclaimer"] = (
-            "A threat-intelligence service reported this URL as unsafe. "
-            "Do not visit it."
+            "A threat-intelligence service reported this URL as unsafe. Do not visit it."
         )
-
         result["indicators"].append(
-            "Threat intelligence: " + reputation["message"]
+            "Threat intelligence: " + reputation.get("message", "Unknown")
         )
 
         for threat in reputation.get("threats", []):
-            result["indicators"].append(
-                "Threat category: " + threat
-            )
+            result["indicators"].append("Threat category: " + threat)
 
     return result
 
@@ -358,7 +322,6 @@ def save_scan(result):
 def get_history(limit=100):
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
-
         rows = conn.execute(
             """
             SELECT
@@ -385,22 +348,16 @@ def index():
     error = None
 
     if request.method == "POST":
-        result = scan_url(
-            request.form.get("url", "")
-        )
+        result = scan_url(request.form.get("url", ""))
 
         if result.get("valid"):
             save_scan(result)
         else:
-            error = result.get(
-                "error", "Unable to analyze this URL."
-            )
+            error = result.get("error", "Unable to analyze this URL.")
             result = None
 
     with sqlite3.connect(DB_PATH) as conn:
-        total = conn.execute(
-            "SELECT COUNT(*) FROM scans"
-        ).fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
 
         suspicious = conn.execute(
             """
@@ -438,14 +395,12 @@ def index():
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
     data = request.get_json(silent=True) or {}
-
     result = scan_url(data.get("url", ""))
 
     if not result.get("valid"):
         return jsonify(result), 400
 
     save_scan(result)
-
     return jsonify(result)
 
 
@@ -472,8 +427,7 @@ def clear_history():
 
     if not expected or token != expected:
         flash(
-            "History clearing is disabled unless ADMIN_TOKEN "
-            "is configured and supplied.",
+            "History clearing is disabled unless ADMIN_TOKEN is configured and supplied.",
             "error",
         )
         return redirect(url_for("history"))
@@ -483,11 +437,11 @@ def clear_history():
         conn.commit()
 
     flash("Scan history cleared.", "success")
-
     return redirect(url_for("history"))
 
 
 init_db()
+
 
 
 if __name__ == "__main__":
