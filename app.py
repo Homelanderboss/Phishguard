@@ -1,3 +1,4 @@
+# app.py
 import os
 import re
 import sqlite3
@@ -5,19 +6,14 @@ import ipaddress
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from flask import (
-    Flask,
-    render_template,
-    request,
-    jsonify,
-    redirect,
-    url_for,
-    flash,
-)
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 
 app = Flask(__name__)
-app.secret_key = os.environ.get(
-    "SECRET_KEY", "dev-only-change-this-secret"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-this-secret")
+
+DB_PATH = os.environ.get("DATABASE_PATH", "/tmp/phishguard.db")
+
+# ... your rest of the app code ...
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
