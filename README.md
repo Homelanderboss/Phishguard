@@ -55,15 +55,7 @@ docker run --rm -p 8080:8080 -e SECRET_KEY="replace-with-a-long-random-secret" p
 
 Then open http://localhost:8080.
 
-## API example
 
-```bash
-curl -X POST http://127.0.0.1:5000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com"}'
-```
-
-The API returns the verdict, score, hostname, and indicator list as JSON.
 
 ## Suggested next improvements
 
