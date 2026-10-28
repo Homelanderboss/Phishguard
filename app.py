@@ -22,9 +22,7 @@ app.secret_key = os.environ.get(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DB_PATH = os.environ.get(
-    "DATABASE_PATH",
-    os.path.join(BASE_DIR, "phishguard.db")
+DB_PATH = os.environ.get("DATABASE_PATH", "/tmp/phishguard.db")
 )
 
 MAX_URL_LENGTH = 2048
