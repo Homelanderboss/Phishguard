@@ -19,7 +19,16 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-this-secret")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "phishguard.db"))
+
+# Vercel's application directory is read-only. Use its writable temporary
+# directory there; on local machines, keep using DATABASE_PATH or the project DB.
+if os.environ.get("VERCEL") == "1":
+    DB_PATH = "/tmp/phishguard.db"
+else:
+    DB_PATH = os.environ.get(
+        "DATABASE_PATH",
+        os.path.join(BASE_DIR, "phishguard.db"),
+    )
 
 MAX_URL_LENGTH = 2048
 
