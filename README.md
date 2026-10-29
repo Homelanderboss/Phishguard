@@ -1,4 +1,4 @@
-# PhishGuard — URL Intelligence
+# PhishGuard URL Intelligence
 
 A deployable educational phishing-URL pattern analyzer built with Flask, SQLite, HTML, and CSS.
 
