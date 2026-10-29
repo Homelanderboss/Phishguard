@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0a1020">
+    <meta name="description" content="Analyze URLs for suspicious phishing indicators using local analysis.">
+
+    <title>PhishGuard — URL Intelligence</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <nav class="nav wrap">
+        <a class="brand" href="/">
+            <span class="brand-mark">P</span>
+
+            <span>
+                Phish<span class="accent">Guard</span>
+                <small>URL INTELLIGENCE</small>
+            </span>
+        </a>
+
+        <div class="nav-right">
+            <span class="status-dot"></span>
+            Local analysis engine
+
+            <a class="nav-link" href="/history">
+                Scan history ↗
+            </a>
+        </div>
+    </nav>
+
+    <main class="wrap">
+
+        <!-- HERO -->
+        <section class="hero">
+            <div class="eyebrow">
+                <span class="eyebrow-line"></span>
+                SECURITY TOOLKIT / 01
+            </div>
+
+            <h1>
+                Know the link<br>
+                <span class="gradient-text">before you click.</span>
+            </h1>
+
+            <p class="hero-copy">
+                Inspect URLs for common phishing indicators using local
+                analysis. Identify suspicious patterns without visiting
+                the destination website or requiring an external API.
+            </p>
+        </section>
+
+        <!-- URL SCANNER -->
+        <section class="scanner card">
+
+            <div class="section-top">
+                <div>
+                    <span class="kicker">URL SCANNER</span>
+                    <h2>Inspect a suspicious link</h2>
+                </div>
+
+                <div class="shield">⌁</div>
+            </div>
+
+            <form method="post" class="scan-form" id="scan-form">
+
+                <label class="sr-only" for="url">
+                    URL to analyze
+                </label>
+
+                <div class="input-shell">
+                    <span class="input-icon">↗</span>
+
+                    <input
+                        id="url"
+                        name="url"
+                        type="text"
+                        maxlength="2048"
+                        placeholder="Paste a URL, e.g. https://example.com"
+                        autocomplete="url"
+                        required
+                        value="{{ result.url if result else '' }}"
+                    >
+
+                    <button type="submit" id="scan-button">
+                        Analyze URL <span>→</span>
+                    </button>
+                </div>
+
+                <div class="form-foot">
+                    <span>◈ Local URL pattern analysis</span>
+                    <span>Do not paste private or tokenized links</span>
+                </div>
+
+            </form>
+
+            <!-- ERROR MESSAGE -->
+            {% if error %}
+                <div class="alert" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <!-- SCAN RESULTS -->
+            {% if result and result.valid %}
+
+                <div class="result result-{{ result.level }}">
+
+                    <div class="result-heading">
+
+                        <div>
+                            <span class="kicker">SCAN COMPLETE</span>
+
+                            <h3>{{ result.verdict }}</h3>
+
+                            <p class="result-host">
+                                {{ result.hostname }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="score-ring score-{{ result.level }}"
+                            style="--score: {{ result.risk_score }}%"
+                            role="img"
+                            aria-label="Risk score {{ result.risk_score }} out of 100"
+                        >
+                            <div>
+                                <strong>{{ result.risk_score }}</strong>
+                                <small>/100</small>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RISK SCORE BAR -->
+                    <div class="score-track">
+                        <span style="--risk-score: {{ result.risk_score }}%; width: var(--risk-score)"></span>
+                    </div>
+
+                    <p class="disclaimer">
+                        {{ result.disclaimer }}
+                    </p>
+
+                    <!-- DETECTED INDICATORS -->
+                    <h4>Signals detected</h4>
+
+                    <ul class="signals">
+                        {% for item in result.indicators %}
+                            <li>
+                                <span>↳</span>
+                                {{ item }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+        <!-- SCAN STATISTICS -->
+        <section class="stats-grid">
+
+            <div class="stat-card">
+                <span class="stat-icon">◎</span>
+
+                <div>
+                    <span class="stat-label">TOTAL SCANS</span>
+                    <strong>{{ stats.total }}</strong>
+                </div>
+
+                <small>saved locally</small>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-icon amber">△</span>
+
+                <div>
+                    <span class="stat-label">SUSPICIOUS</span>
+                    <strong>{{ stats.suspicious }}</strong>
+                </div>
+
+                <small>medium-risk signals</small>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-icon red">⌁</span>
+
+                <div>
+                    <span class="stat-label">HIGH RISK</span>
+                    <strong>{{ stats.high }}</strong>
+                </div>
+
+                <small>multiple signals</small>
+            </div>
+
+        </section>
+
+        <!-- LOWER CONTENT -->
+        <section class="lower-grid">
+
+            <!-- RECENT SCANS -->
+            <div class="card recent-card">
+
+                <div class="section-top">
+                    <div>
+                        <span class="kicker">ACTIVITY</span>
+                        <h2>Recent scans</h2>
+                    </div>
+
+                    <a class="text-link" href="/history">
+                        View all ↗
+                    </a>
+                </div>
+
+                {% if history %}
+
+                    <div class="history-list">
+
+                        {% for item in history %}
+
+                            <div class="history-row">
+
+                                <span class="mini-status
+                                    {% if item.risk_score >= 55 %}
+                                        red-bg
+                                    {% elif item.risk_score >= 25 %}
+                                        amber-bg
+                                    {% endif %}
+                                "></span>
+
+                                <div class="history-url">
+                                    <strong>
+                                        {{ item.hostname or item.url }}
+                                    </strong>
+
+                                    <small>
+                                        {{ item.created_at[:19].replace('T', ' ') }} UTC
+                                    </small>
+                                </div>
+
+                                <span class="pill
+                                    {% if item.risk_score >= 55 %}
+                                        pill-high
+                                    {% elif item.risk_score >= 25 %}
+                                        pill-mid
+                                    {% else %}
+                                        pill-low
+                                    {% endif %}
+                                ">
+                                    {{ item.risk_score }}/100
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty-state">
+                        <span>⌁</span>
+                        <p>
+                            No scans yet. Analyze a URL to start
+                            building your history.
+                        </p>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <!-- HOW IT WORKS -->
+            <div class="card how-card">
+
+                <span class="kicker">HOW IT WORKS</span>
+
+                <h2>Signals, not assumptions.</h2>
+
+                <div class="how-item">
+                    <span>01</span>
+
+                    <div>
+                        <strong>Parse</strong>
+                        <p>
+                            Extract the hostname, scheme, and URL structure.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="how-item">
+                    <span>02</span>
+
+                    <div>
+                        <strong>Inspect</strong>
+                        <p>
+                            Check for patterns often associated with
+                            deceptive or suspicious links.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="how-item">
+                    <span>03</span>
+
+                    <div>
+                        <strong>Calculate</strong>
+                        <p>
+                            Generate a heuristic risk score based on
+                            the indicators detected.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="notice">
+                    <strong>Important</strong>
+
+                    <p>
+                        PhishGuard uses heuristic URL analysis only.
+                        It does not query live threat databases.
+                        A low risk score does not guarantee that
+                        a website is safe.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- FOOTER -->
+        <footer>
+            <span>
+                PHISHGUARD <span class="accent">/</span>
+                EDUCATIONAL SECURITY PROJECT
+            </span>
+
+            <span>
+                Analyze safely. Think before you click.
+            </span>
+        </footer>
+
+    </main>
+
+    <!-- BUTTON FEEDBACK -->
+    <script>
+        const scanForm = document.getElementById("scan-form");
+        const scanButton = document.getElementById("scan-button");
+
+        if (scanForm && scanButton) {
+            scanForm.addEventListener("submit", function () {
+                if (scanForm.checkValidity()) {
+                    scanButton.disabled = true;
+                    scanButton.innerHTML = "Analyzing...";
+
+                    // Re-enable if the browser restores the page
+                    // without completing the navigation.
+                    setTimeout(() => {
+                        scanButton.disabled = false;
+                        scanButton.innerHTML = 'Analyze URL <span>→</span>';
+                    }, 15000);
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
